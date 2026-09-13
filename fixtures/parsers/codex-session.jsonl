@@ -1,0 +1,12 @@
+{"timestamp":"2026-08-20T11:00:00.000Z","type":"session_meta","payload":{"id":"codex-session-1","cwd":"/fixture/repo","cli_version":"0.142.5"}}
+{"timestamp":"2026-08-20T11:00:01.000Z","type":"response_item","payload":{"type":"message","role":"developer","content":[{"type":"input_text","text":"<skills_instructions>\n### Skill roots\n- `r0` = `/fixture/home/.agents/skills`\n- pr-review: Reviews changes. (file: r0/pr-review/SKILL.md)\n- release-notes: Writes notes. (file: r0/release-notes/SKILL.md)\n</skills_instructions>"}]}}
+{"timestamp":"2026-08-20T11:00:02.000Z","type":"turn_context","payload":{"turn_id":"turn-1","cwd":"/fixture/repo","model":"gpt-fixture"}}
+{"timestamp":"2026-08-20T11:00:03.000Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"sed -n 1,120p /fixture/home/.agents/skills/pr-review/SKILL.md\"}"}}
+{"timestamp":"2026-08-20T11:00:04.000Z","type":"event_msg","payload":{"type":"token_count","turn_id":"turn-1","info":{"last_token_usage":{"input_tokens":1000,"cached_input_tokens":600,"output_tokens":80,"reasoning_output_tokens":20,"total_tokens":1080}}}}
+{"timestamp":"2026-08-20T11:01:00.000Z","type":"turn_context","payload":{"turn_id":"turn-2","cwd":"/fixture/repo","model":"gpt-fixture"}}
+{"timestamp":"2026-08-20T11:01:01.000Z","type":"event_msg","payload":{"type":"user_message","turn_id":"turn-2","message":"$release-notes for $HOME and $1, then $release-notes again"}}
+{"timestamp":"2026-08-20T11:01:01.500Z","type":"response_item","payload":{"type":"message","role":"user","id":"msg-user-2","content":[{"type":"input_text","text":"<environment_context>PATH=$PATH</environment_context>\n$release-notes for $HOME and $1, then $release-notes again"}]}}
+{"timestamp":"2026-08-20T11:01:02.000Z","type":"event_msg","payload":{"type":"token_count","turn_id":"turn-2","info":{"last_token_usage":{"input_tokens":500,"cached_input_tokens":100,"output_tokens":40,"reasoning_output_tokens":0,"total_tokens":540}}}}
+{"timestamp":"2026-08-20T11:01:03.000Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"turn-2","completed_at":1787223663}}
+{"timestamp":"2026-08-20T11:01:04.000Z","type":"future_record","payload":{"safe":"ignored"}}
+not-json

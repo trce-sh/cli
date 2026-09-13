@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest a change to the trce CLI.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: Do not include prompts, responses, source code, diffs, credentials, local paths, or private repository names.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: The command, option, or output you would expect. Sketch the CLI output if it helps.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you use now, or other ways this could be solved.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: This request keeps the privacy boundary. It does not ask trce to send prompts, responses, code, diffs, local paths, or shell arguments.
+          required: true
+        - label: I removed prompts, responses, source code, diffs, credentials, local paths, and private repository names.
+          required: true

@@ -1,0 +1,51 @@
+name: Publish
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: startsWith(github.event.release.tag_name, 'v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22.23.2
+          package-manager-cache: false
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@10.34.5 --activate
+      - name: Install npm with trusted-publishing support
+        run: npm install --global npm@11.19.1
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      # verify runs once here; smoke:package and pack:check only build. npm publish still runs the
+      # package's prepack script (verify + build) as the final guard before the tarball is created.
+      - name: Verify source
+        run: pnpm run verify
+      - name: Verify release metadata
+        run: pnpm run release:check
+      - name: Match tag to package version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: node scripts/check-release-tag.mjs "$RELEASE_TAG"
+      - name: Smoke installed package
+        run: pnpm run smoke:package
+      - name: Inspect package contents
+        run: pnpm run pack:check
+      - name: Publish public package
+        run: npm publish --access public

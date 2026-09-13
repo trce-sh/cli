@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/trce-sh/cli/security/policy
+    about: Report vulnerabilities privately. Do not open a public issue.
+  - name: Product access
+    url: https://trce.sh?utm_source=github&utm_medium=referral&utm_campaign=cli&utm_content=issue_template
+    about: Request access to the team product.

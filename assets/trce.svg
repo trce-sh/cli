@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 24" width="96" height="24" fill="none">
+  <title>trce</title>
+  <g stroke="#11100e" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18" opacity="0.3"/>
+    <path d="M3 18h4.5c4.5 0 3.5-12 8.5-12H21" opacity="0.78"/>
+  </g>
+  <circle cx="3" cy="6" r="1.35" fill="#11100e" opacity="0.3"/>
+  <circle cx="3" cy="18" r="1.35" fill="#11100e" opacity="0.78"/>
+  <circle cx="21" cy="6" r="1.35" fill="#11100e" opacity="0.78"/>
+  <text x="30" y="19" fill="#11100e" font-family="Geist, 'Geist Variable', -apple-system, 'Segoe UI', sans-serif" font-size="20" font-weight="500" letter-spacing="-0.8">trce</text>
+</svg>

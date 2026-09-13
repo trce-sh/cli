@@ -1,0 +1,14 @@
+{"timestamp":"2026-08-20T10:00:00Z","type":"session_meta","payload":{"id":"fixture-cumulative","cwd":"/fixture/repo","cli_version":"0.142.5"}}
+{"timestamp":"2026-08-20T10:00:01Z","type":"response_item","payload":{"type":"message","role":"developer","content":[{"type":"input_text","text":"- pr-review: Review a change. (file: /fixture/skills/pr-review/SKILL.md)"}]}}
+{"timestamp":"2026-08-20T10:00:02Z","type":"turn_context","payload":{"turn_id":"turn-1","model":"gpt-fixture"}}
+{"timestamp":"2026-08-20T10:00:03Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","call_id":"echo-only","arguments":"{\"cmd\":\"echo /fixture/skills/pr-review/SKILL.md\"}"}}
+{"timestamp":"2026-08-20T10:00:04Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","call_id":"read-1","arguments":"{\"cmd\":\"cat /fixture/skills/pr-review/SKILL.md\"}"}}
+{"timestamp":"2026-08-20T10:00:05Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"cached_input_tokens":20,"output_tokens":10,"total_tokens":110},"last_token_usage":{"input_tokens":100,"cached_input_tokens":20,"output_tokens":10,"total_tokens":110}}}}
+{"timestamp":"2026-08-20T10:00:06Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":300,"cached_input_tokens":70,"output_tokens":30,"total_tokens":330},"last_token_usage":{"input_tokens":200,"cached_input_tokens":50,"output_tokens":20,"total_tokens":220}}}}
+{"timestamp":"2026-08-20T10:00:07Z","type":"event_msg","payload":{"type":"token_count","rate_limits":{},"info":{"total_token_usage":{"input_tokens":300,"cached_input_tokens":70,"output_tokens":30,"total_tokens":330},"last_token_usage":{"input_tokens":200,"cached_input_tokens":50,"output_tokens":20,"total_tokens":220}}}}
+{"timestamp":"2026-08-20T10:01:00Z","type":"turn_context","payload":{"turn_id":"turn-2","model":"gpt-fixture"}}
+{"timestamp":"2026-08-20T10:01:01Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","call_id":"read-2","arguments":"{\"cmd\":\"cat /fixture/skills/pr-review/SKILL.md\"}"}}
+{"timestamp":"2026-08-20T10:01:02Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":400,"cached_input_tokens":90,"output_tokens":40,"total_tokens":440},"last_token_usage":{"input_tokens":100,"cached_input_tokens":20,"output_tokens":10,"total_tokens":110}}}}
+{"timestamp":"2026-08-20T10:02:00Z","type":"turn_context","payload":{"turn_id":"turn-3","model":"gpt-fixture"}}
+{"timestamp":"2026-08-20T10:02:01Z","type":"event_msg","payload":{"type":"user_message","message":"$pr-review sanitized request"}}
+{"timestamp":"2026-08-20T10:02:02Z","type":"event_msg","payload":{"type":"task_complete"}}

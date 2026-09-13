@@ -1,0 +1,31 @@
+trce
+
+Local report · last 30 days
+
+Overview
+  4 skills · 10 installations
+  Installations: 3 called · 2 no calls · 5 not measured
+  4 calls
+  1 drifted skill
+
+Recent activity · 3
+  SKILL                        AGENT         SCOPE         CALLS  CATEGORY
+  ──────────────────────────────────────────────────────────────────────────────────────
+  pr-review                    Claude Code   Personal          1  Security
+  pr-review                    Codex         Personal          1  Code quality
+  release-notes                Codex         Personal          1  Docs & release
+
+Needs attention · 1
+  SKILL                       AGENT         STATE         ISSUES
+  ──────────────────────────────────────────────────────────────────────────────────────
+  legacy-helper               Cursor        not measured  missing frontmatter, missing …
+
+No calls · 2
+  SKILL                           AGENT         SCOPE       ISSUES
+  ──────────────────────────────────────────────────────────────────────────────────────
+  code-review                     Claude Code   Personal    -
+  legacy-helper                   Claude Code   Personal    missing frontmatter, missin…
+
+4 other installations hidden. Run trce report --all to list everything.
+
+Local only · Nothing was sent.

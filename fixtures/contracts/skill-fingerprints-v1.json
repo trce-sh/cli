@@ -1,0 +1,99 @@
+{
+  "version": "skill-fingerprint@1",
+  "cases": [
+    {
+      "name": "lf",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "hex": "536b696c6c2e0a"
+        }
+      ],
+      "fingerprint": "9dabd1eda7672a5558a6a45c852e55d43cd066d563997e2b50cc5b3dcbd93de9",
+      "skillMdFingerprint": "3a9d93eb5e34376698c16757adac55caca1053893a3e524ed344012721f95459"
+    },
+    {
+      "name": "crlf",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "hex": "536b696c6c2e0d0a"
+        }
+      ],
+      "fingerprint": "9dabd1eda7672a5558a6a45c852e55d43cd066d563997e2b50cc5b3dcbd93de9",
+      "skillMdFingerprint": "d0c63fc40e25da11a71198c1cfdad824e06a77fb1931ad69f57fb5607cd50e88"
+    },
+    {
+      "name": "binary",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "hex": "536b696c6c2e0a"
+        },
+        {
+          "path": "assets/icon.bin",
+          "hex": "ff000d0a80"
+        }
+      ],
+      "fingerprint": "f71229afd1e49f65b676366ede63e0db8ff5041450f056fcae61f4d358d6ac2e",
+      "skillMdFingerprint": "3a9d93eb5e34376698c16757adac55caca1053893a3e524ed344012721f95459"
+    },
+    {
+      "name": "unicode-order",
+      "files": [
+        {
+          "path": "😀.txt",
+          "hex": "61737472616c0a"
+        },
+        {
+          "path": ".txt",
+          "hex": "626d700a"
+        },
+        {
+          "path": "Z.txt",
+          "hex": "75707065720a"
+        },
+        {
+          "path": "a.txt",
+          "hex": "6c6f7765720a"
+        },
+        {
+          "path": "SKILL.md",
+          "hex": "536b696c6c2e0a"
+        }
+      ],
+      "fingerprint": "43ab723ef640dba82a516f8003f3ace104bba06d7c9745038ac78ce562df8b50",
+      "skillMdFingerprint": "3a9d93eb5e34376698c16757adac55caca1053893a3e524ed344012721f95459"
+    },
+    {
+      "name": "extensionless-text",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "hex": "536b696c6c2e0a"
+        },
+        {
+          "path": "LICENSE",
+          "hex": "4c6963656e73652e0d0a"
+        }
+      ],
+      "fingerprint": "7fe5d2779f3833b0073a861e8d29cc86b95ac6af99637ebdc7ffbe5255f2a010",
+      "skillMdFingerprint": "3a9d93eb5e34376698c16757adac55caca1053893a3e524ed344012721f95459"
+    },
+    {
+      "name": "extensionless-binary",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "hex": "536b696c6c2e0a"
+        },
+        {
+          "path": "data",
+          "hex": "000d0aff"
+        }
+      ],
+      "fingerprint": "778d80650aa9e0d972c321cca0e386b3128b627f6b1bc22ddb42472ce2d64f51",
+      "skillMdFingerprint": "3a9d93eb5e34376698c16757adac55caca1053893a3e524ed344012721f95459"
+    }
+  ]
+}

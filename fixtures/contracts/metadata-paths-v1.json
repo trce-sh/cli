@@ -1,0 +1,65 @@
+{
+  "version": "metadata-paths@1",
+  "cases": [
+    {
+      "value": "/Users/example/private",
+      "blocked": true
+    },
+    {
+      "value": "\\Users\\example\\private",
+      "blocked": true
+    },
+    {
+      "value": "Read `/Users/example/private`.",
+      "blocked": true
+    },
+    {
+      "value": "Read (/home/example/private).",
+      "blocked": true
+    },
+    {
+      "value": "path=C:/Users/example/private",
+      "blocked": true
+    },
+    {
+      "value": "Read C:\\Users\\example\\private",
+      "blocked": true
+    },
+    {
+      "value": "Read [notes](file:///tmp/private).",
+      "blocked": true
+    },
+    {
+      "value": "Read \"~/private\".",
+      "blocked": true
+    },
+    {
+      "value": "Read /root/private.",
+      "blocked": true
+    },
+    {
+      "value": "Read \\\\server\\share\\private.",
+      "blocked": true
+    },
+    {
+      "value": "Review pull requests.",
+      "blocked": false
+    },
+    {
+      "value": "acme/app",
+      "blocked": false
+    },
+    {
+      "value": "https://github.com/acme/app",
+      "blocked": false
+    },
+    {
+      "value": "Document the /api route.",
+      "blocked": false
+    },
+    {
+      "value": "Testing & e2e",
+      "blocked": false
+    }
+  ]
+}

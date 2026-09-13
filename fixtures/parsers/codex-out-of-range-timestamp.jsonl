@@ -1,0 +1,2 @@
+{"timestamp":"2026-08-20T12:00:00.000Z","type":"session_meta","payload":{"id":"codex-invalid-time","cwd":"/fixture/repo","cli_version":"0.142.5"}}
+{"type":"event_msg","payload":{"type":"task_complete","completed_at":1e300}}

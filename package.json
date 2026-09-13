@@ -1,0 +1,73 @@
+{
+  "name": "@trce/cli",
+  "version": "0.2.0-development",
+  "description": "Local-first coding-agent skill usage, inventory, and maintenance CLI.",
+  "author": "Tair Asim",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "homepage": "https://trce.sh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/trce-sh/cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/trce-sh/cli/issues"
+  },
+  "keywords": [
+    "agent-skills",
+    "claude-code",
+    "codex",
+    "cursor",
+    "developer-tools",
+    "skills"
+  ],
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "packageManager": "pnpm@10.34.5",
+  "bin": {
+    "trce": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "assets/trce.svg",
+    "assets/trce-dark.svg",
+    "CHANGELOG.md",
+    "LICENSE",
+    "PRIVACY.md",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/",
+    "tag": "latest"
+  },
+  "scripts": {
+    "benchmark": "pnpm run build && node scripts/benchmark.mjs",
+    "build": "node scripts/clean.mjs && tsc -p tsconfig.build.json",
+    "check": "biome check .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "verify": "pnpm run check && pnpm run typecheck && pnpm run test",
+    "pack:check": "pnpm run build && npm pack --dry-run --ignore-scripts --cache node_modules/.cache/npm",
+    "smoke:package": "pnpm run build && node scripts/smoke-package.mjs",
+    "release:check": "node scripts/check-release.mjs",
+    "prepack": "pnpm run verify && pnpm run build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.7",
+    "@types/node": "22.20.1",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

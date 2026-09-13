@@ -1,0 +1,9 @@
+.DS_Store
+.env
+.env.*
+*.log
+*.tgz
+.npm-cache/
+coverage/
+dist/
+node_modules/
