@@ -100,9 +100,12 @@ describe('repository documentation', () => {
     const guide = await readFile(new URL('docs/USAGE.md', root), 'utf8')
     for (const document of [readme, guide]) {
       expect(document).not.toContain('node dist/bin.js')
-      expect(document).not.toContain('npx @trce/cli')
       expect(document).not.toContain('blob/main/')
     }
+    expect(readme).toContain('npm install --global @trce/cli')
+    expect(readme).toContain('npx @trce/cli report')
+    expect(readme).not.toContain('The skills CLI is not on npm yet')
+    expect(guide).not.toContain('npx @trce/cli')
     const manifest: unknown = JSON.parse(await readFile(new URL('package.json', root), 'utf8'))
     if (
       typeof manifest !== 'object' ||
