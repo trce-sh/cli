@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-13
+
 Initial release of the local-first skill management CLI.
 
 - Offline skill inventory, activity reports, duplicate detection, and drift comparison.

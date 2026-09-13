@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import manifest from '../package.json' with { type: 'json' }
 import {
   asciiMode,
   brand,
@@ -26,7 +27,7 @@ describe('terminal branding', () => {
     expect(output.split('\n')).toHaveLength(3)
     expect(output).toContain(`${esc}[38;2;157;152;255mtrce.sh${esc}[0m`)
     expect(output).toContain(`${esc}[1mReview system for your agent skills${esc}[0m`)
-    expect(output).toContain('CLI · 0.2.0-development')
+    expect(output).toContain(`CLI · ${manifest.version}`)
     expect(output).toContain(`${esc}]8;;https://trce.sh${esc}\\`)
   })
 

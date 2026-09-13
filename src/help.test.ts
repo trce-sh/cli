@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
+import manifest from '../package.json' with { type: 'json' }
 import { runCli } from './cli.js'
 import { commandHelpText, commandTable, helpText } from './help.js'
 
@@ -60,7 +61,7 @@ describe('CLI shell', () => {
 
     expect(help).toContain('trce.sh')
     expect(help).toContain('Review system for your agent skills')
-    expect(help).toContain('CLI · 0.2.0-development')
+    expect(help).toContain(`CLI · ${manifest.version}`)
     expect(help).not.toContain('trce helps your team')
   })
 

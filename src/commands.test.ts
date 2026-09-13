@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import manifest from '../package.json' with { type: 'json' }
 import { terminalLink } from './brand.js'
 import { runCli } from './cli.js'
 import { writeLinkedConfig } from './config.js'
@@ -663,7 +664,7 @@ describe('team-link gate', () => {
 
     expect(help.exitCode).toBe(0)
     expect(help.stdout).toContain('report, dedupe, and diff run without a linked team')
-    expect(version).toEqual({ exitCode: 0, stderr: '', stdout: '0.2.0-development\n' })
+    expect(version).toEqual({ exitCode: 0, stderr: '', stdout: `${manifest.version}\n` })
     for (const flag of ['-v', '-V', 'version']) {
       await expect(runCli([flag], context)).resolves.toEqual(version)
     }
