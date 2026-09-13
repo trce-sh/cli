@@ -17,11 +17,17 @@ No account for local reports. No prompts, responses, or source code sent to trce
 
 ## Get started
 
-Requires Node.js 22.14 or newer. The skills CLI is not on npm yet;
-[build and install it from this repository](CONTRIBUTING.md#build-and-install).
+Requires Node.js 22.14 or newer.
 
 ```sh
+npm install --global @trce/cli
 trce report
+```
+
+Or run without a global install:
+
+```sh
+npx @trce/cli report
 ```
 
 See recent skill calls, differing copies, and potential cleanup in your terminal. These commands
