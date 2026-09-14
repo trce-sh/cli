@@ -64,8 +64,8 @@
     "prepack": "pnpm run verify && pnpm run build"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.7",
-    "@types/node": "22.20.1",
+    "@biomejs/biome": "2.5.13",
+    "@types/node": "22.20.2",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
   }
