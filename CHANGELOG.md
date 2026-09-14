@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-14
+
 ### Bug fixes
 
 - Preserve an outer Codex notifier when removing trce from its JSON-encoded callback. Reinstalling also refreshes trce's nested notification wrapper.
