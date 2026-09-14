@@ -242,7 +242,12 @@ async function installCodexHook(paths: HookPaths, trceCommand: string[], dryRun 
       'Saved Codex notify points back to trce. Repair the recursive notification chain before installing hooks; no hook was changed',
     )
   }
-  if (existing && state?.codexInstalledLine === existing.line.trim()) {
+  if (
+    existing &&
+    state?.codexInstalledLine &&
+    (state.codexInstalledLine === existing.line.trim() ||
+      restoreNestedNotify(existing.value, state, paths) !== null)
+  ) {
     if (state.codexOriginalLine) {
       const original = topLevelNotify(state.codexOriginalLine)
       const command = original && parseTomlStringArray(original.value)
@@ -291,11 +296,15 @@ async function removeCodexHook(paths: HookPaths, dryRun = false) {
   }
   const text = await readText(paths.codexConfig)
   const existing = topLevelNotify(text)
-  if (!existing || existing.line.trim() !== state.codexInstalledLine) {
+  const replacement = existing
+    ? existing.line.trim() === state.codexInstalledLine
+      ? (state.codexOriginalLine ?? '')
+      : restoreNestedNotify(existing.value, state, paths)
+    : null
+  if (!existing || replacement === null) {
     throw new Error('Codex notify changed after trce setup; it was left untouched')
   }
   if (dryRun) return 'removed' as const
-  const replacement = state.codexOriginalLine ?? ''
   const next = `${text.slice(0, existing.start)}${replacement}${text.slice(existing.end)}`
   await writeForeignTextAtomic(paths.codexConfig, next.replace(/^\n/u, ''))
   await writeOwnedJsonAtomic(paths.state, {
@@ -304,6 +313,56 @@ async function removeCodexHook(paths: HookPaths, dryRun = false) {
     version: 1,
   } satisfies HookState)
   return 'removed' as const
+}
+
+/** Replace only an exact saved argv inside JSON-encoded command arguments, never shell text. */
+function restoreNestedNotify(value: string, state: HookState, paths: HookPaths): string | null {
+  const installed = state.codexInstalledLine && topLevelNotify(state.codexInstalledLine)
+  const original = state.codexOriginalLine && topLevelNotify(state.codexOriginalLine)
+  const installedCommand = installed && parseTomlStringArray(installed.value)
+  const originalCommand = original && parseTomlStringArray(original.value)
+  const current = parseTomlStringArray(value)
+  // Without a previous command, we cannot assume how a foreign wrapper disables its callback.
+  if (!installedCommand || !originalCommand || !current) return null
+  if (!referencesTrceHook(tomlStringArray(installedCommand), paths)) return null
+  const restored = replaceNestedCommand(current, installedCommand, originalCommand, 0)
+  if (!restored) return null
+  const line = `notify = ${tomlStringArray(restored)}`
+  // Do not delete owned scripts while another, unrecognised callback still refers to them.
+  return referencesTrceHook(line, paths) ? null : line
+}
+
+function replaceNestedCommand(
+  current: string[],
+  installed: string[],
+  original: string[],
+  depth: number,
+): string[] | null {
+  if (depth > 8) return null
+  if (current.length === installed.length && current.every((arg, i) => arg === installed[i])) {
+    return original
+  }
+  let changed = false
+  const restored = current.map((arg, index) => {
+    if (index === 0) return arg
+    let nested: unknown
+    try {
+      nested = JSON.parse(arg)
+    } catch {
+      return arg
+    }
+    if (
+      !Array.isArray(nested) ||
+      !nested.every((item): item is string => typeof item === 'string')
+    ) {
+      return arg
+    }
+    const replacement = replaceNestedCommand(nested, installed, original, depth + 1)
+    if (!replacement) return arg
+    changed = true
+    return JSON.stringify(replacement)
+  })
+  return changed ? restored : null
 }
 
 // Recognises the current and the beta `statusMessage` markers, the pre-release in-command marker
@@ -357,6 +416,7 @@ function parseTomlStringArray(value: string) {
     if (index >= body.length) break
     const quote = body[index]
     if (quote !== '"' && quote !== "'") return null
+    const start = index
     index += 1
     let result = ''
     while (index < body.length && body[index] !== quote) {
@@ -369,6 +429,17 @@ function parseTomlStringArray(value: string) {
       index += 1
     }
     if (body[index] !== quote) return null
+    if (quote === '"') {
+      // JSON string decoding preserves escaped controls, Unicode, quotes and backslashes.
+      // Unsupported TOML escapes fail closed instead of silently changing notifier arguments.
+      try {
+        const decoded: unknown = JSON.parse(body.slice(start, index + 1))
+        if (typeof decoded !== 'string') return null
+        result = decoded
+      } catch {
+        return null
+      }
+    }
     strings.push(result)
     index += 1
   }

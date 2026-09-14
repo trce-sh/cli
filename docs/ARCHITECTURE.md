@@ -33,6 +33,10 @@ mark child environments against reentry, and coalesce callbacks within one secon
 guard. Notification payloads go only to a pre-existing notifier, never to trce. Reinstalling hooks
 refreshes owned launchers; `trce init --remove` also removes their admission state.
 
+If another notifier wraps trce's saved command in a JSON argument, removal restores the previous
+command inside that wrapper and preserves its other arguments. Unknown encodings, changed
+callback arguments, and wrappers without a saved previous command are left untouched.
+
 There is no resident daemon. Local state lives under `~/.trce/`; agent hook configuration stays
 in each agent's own settings. If a crash leaves an admission directory behind, hooks fail closed.
 Remove and reinstall hooks to clear it.

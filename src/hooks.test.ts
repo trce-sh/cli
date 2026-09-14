@@ -311,6 +311,156 @@ describe('additive hooks', () => {
     expect(await readFile(join(home, '.codex', 'config.toml'), 'utf8')).toBe(config)
   })
 
+  it.each([false, true])(
+    'removes a JSON-wrapped notifier without losing the outer command (escaped slashes: %s)',
+    async (escapeSlashes) => {
+      const home = await makeHome('trce-hooks-nested-remove-')
+      const original = ['C:\\Program Files\\Notifier\\notify.exe', '--label', 'line\nbreak', '雪']
+      const configPath = join(home, '.codex', 'config.toml')
+      await writeFile(configPath, `notify = ${JSON.stringify(original).replace('雪', '\\u96ea')}\n`)
+      await install(home)
+      const installed: unknown = JSON.parse(
+        (await readFile(configPath, 'utf8')).trim().replace(/^notify = /u, ''),
+      )
+      const encoded = JSON.stringify(installed)
+      const outer = [
+        '/Applications/Notifier App/notifier',
+        'turn-ended',
+        '--previous-notify',
+        escapeSlashes ? encoded.replaceAll('/', '\\/') : encoded,
+      ]
+      const suffix = '\nmodel = "fixture"\n[projects.fixture]\ntrust_level = "trusted"\n'
+      await writeFile(configPath, `notify = ${JSON.stringify(outer)}${suffix}`)
+      // Reinstall must refresh the owned wrapper even after another tool wraps it.
+      await writeFile(join(home, '.trce', 'codex-notify.mjs'), '// outdated wrapper\n')
+      await expect(install(home)).resolves.toMatchObject({ codex: 'already-installed' })
+      expect(await readFile(join(home, '.trce', 'codex-notify.mjs'), 'utf8')).toContain(
+        'TRCE_NOTIFY_ACTIVE',
+      )
+
+      await expect(removeHooks({ homeDirectory: home })).resolves.toEqual({
+        claude: 'removed',
+        codex: 'removed',
+      })
+      const removed = await readFile(configPath, 'utf8')
+      // Compare argv values rather than incidental TOML spacing.
+      expect(JSON.parse(removed.split('\n')[0]?.replace(/^notify = /u, '') ?? '')).toEqual([
+        ...outer.slice(0, -1),
+        JSON.stringify(original),
+      ])
+      expect(removed.slice(removed.indexOf('\n'))).toBe(suffix)
+      await expect(lstat(join(home, '.trce', 'codex-notify.mjs'))).rejects.toThrow()
+      await expect(removeHooks({ homeDirectory: home })).resolves.toEqual({
+        claude: 'not-installed',
+        codex: 'not-installed',
+      })
+      await install(home)
+      await removeHooks({ homeDirectory: home })
+      expect(await readFile(configPath, 'utf8')).toBe(removed)
+    },
+  )
+
+  it('leaves unknown changed notification formats and both hooks untouched', async () => {
+    const home = await makeHome('trce-hooks-nested-unknown-')
+    const configPath = join(home, '.codex', 'config.toml')
+    await writeFile(configPath, 'notify = ["original-notifier"]\n')
+    await install(home)
+    const claude = await readFile(join(home, '.claude', 'settings.json'), 'utf8')
+    const wrapper = await readFile(join(home, '.trce', 'codex-notify.mjs'), 'utf8')
+    const unknown = `notify = ${JSON.stringify(['new-notifier', '--shell-command', `node ${join(home, '.trce', 'codex-notify.mjs')}`])}\n`
+    await writeFile(configPath, unknown)
+    await expect(removeHooks({ homeDirectory: home })).rejects.toThrow('left untouched')
+    expect(await readFile(configPath, 'utf8')).toBe(unknown)
+    expect(await readFile(join(home, '.claude', 'settings.json'), 'utf8')).toBe(claude)
+    expect(await readFile(join(home, '.trce', 'codex-notify.mjs'), 'utf8')).toBe(wrapper)
+  })
+
+  it('keeps notifications working and stops reporting after removing a nested hook', async () => {
+    const home = await makeHome('trce-hooks-nested-runtime-')
+    const configPath = join(home, '.codex', 'config.toml')
+    const notifier = join(home, 'notifier.mjs')
+    const outer = join(home, 'outer.mjs')
+    const reporter = join(home, 'reporter.mjs')
+    const events = join(home, 'events.txt')
+    const reports = join(home, 'reports.txt')
+    await writeFile(
+      notifier,
+      `import { appendFileSync } from 'node:fs'
+appendFileSync(${JSON.stringify(events)}, JSON.stringify(process.argv.slice(2)) + '\\n')
+`,
+    )
+    await writeFile(
+      reporter,
+      `import { appendFileSync } from 'node:fs'
+appendFileSync(${JSON.stringify(reports)}, JSON.stringify(process.argv.slice(2)) + '\\n')
+`,
+    )
+    await writeFile(
+      outer,
+      `import { spawnSync } from 'node:child_process'
+const [file, ...args] = JSON.parse(process.argv[2])
+const result = spawnSync(file, [...args, ...process.argv.slice(3)], { timeout: 2000 })
+process.exit(result.status ?? 1)
+`,
+    )
+    await writeFile(
+      configPath,
+      `notify = ${JSON.stringify([process.execPath, notifier, '--safe'])}\n`,
+    )
+    await installHooks({ executable: process.execPath, homeDirectory: home, scriptPath: reporter })
+    const installed = (await readFile(configPath, 'utf8')).trim().replace(/^notify = /u, '')
+    await writeFile(
+      configPath,
+      `notify = ${JSON.stringify([process.execPath, outer, installed])}\n`,
+    )
+    const event = '{"type":"agent-turn-complete","last-assistant-message":"synthetic-private-text"}'
+    await promisify(execFile)(process.execPath, [outer, installed, event], { timeout: 3000 })
+    await expect.poll(() => readFile(events, 'utf8')).toBe(`${JSON.stringify(['--safe', event])}\n`)
+    await expect.poll(() => readFile(reports, 'utf8')).toBe('["hook"]\n')
+
+    await removeHooks({ homeDirectory: home })
+    const command: unknown = JSON.parse(
+      (await readFile(configPath, 'utf8')).trim().replace(/^notify = /u, ''),
+    )
+    if (
+      !Array.isArray(command) ||
+      !command.every((arg): arg is string => typeof arg === 'string')
+    ) {
+      throw new Error('Expected a notification command')
+    }
+    const [executable, ...args] = command
+    if (!executable) throw new Error('Expected a notification executable')
+    await promisify(execFile)(executable, [...args, event], { timeout: 3000 })
+    expect(await readFile(events, 'utf8')).toBe(`${JSON.stringify(['--safe', event])}\n`.repeat(2))
+    expect(await readFile(reports, 'utf8')).toBe('["hook"]\n')
+  })
+
+  it.each(['different-argv', 'remaining-reference', 'no-original', 'too-deep'])(
+    'refuses ambiguous nested cleanup: %s',
+    async (scenario) => {
+      const home = await makeHome('trce-hooks-nested-ambiguous-')
+      const configPath = join(home, '.codex', 'config.toml')
+      if (scenario !== 'no-original')
+        await writeFile(configPath, 'notify = ["original-notifier"]\n')
+      await install(home)
+      const installed = (await readFile(configPath, 'utf8')).trim().replace(/^notify = /u, '')
+      let nested = installed
+      if (scenario === 'different-argv') nested = installed.replace(']', ', "--extra"]')
+      for (let i = 0; i < (scenario === 'too-deep' ? 10 : 1); i += 1) {
+        nested = JSON.stringify(['outer-notifier', '--previous-notify', nested])
+      }
+      if (scenario === 'remaining-reference') {
+        nested = JSON.stringify(['outer-notifier', nested, join(home, '.trce', 'hook.mjs')])
+      }
+      const changed = `notify = ${nested}\n`
+      await writeFile(configPath, changed)
+      await expect(removeHooks({ homeDirectory: home })).rejects.toThrow('left untouched')
+      expect(await readFile(configPath, 'utf8')).toBe(changed)
+      expect(await readFile(join(home, '.claude', 'settings.json'), 'utf8')).toContain(marker)
+      await expect(stat(join(home, '.trce', 'hook.mjs'))).resolves.toBeDefined()
+    },
+  )
+
   it('writes through symlinked foreign configs and preserves their mode', async () => {
     const home = await makeHome('trce-hooks-symlink-')
     const dotfiles = join(home, 'dotfiles')
