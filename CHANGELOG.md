@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Bug fixes
+
+- Preserve an outer Codex notifier when removing trce from its JSON-encoded callback. Reinstalling also refreshes trce's nested notification wrapper.
+- Preserve escaped characters in existing Codex notification arguments.
+
 ## [0.2.0] - 2026-09-13
 
 Initial release of the local-first skill management CLI.
