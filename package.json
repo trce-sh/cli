@@ -1,6 +1,7 @@
 {
   "name": "@trce/cli",
-  "version": "0.2.1",
+  "version": "0.2.2-development",
+  "private": true,
   "description": "Local-first coding-agent skill usage, inventory, and maintenance CLI.",
   "author": "Tair Asim",
   "license": "MIT",
