@@ -1,31 +1,41 @@
-trce
 
-Local report · last 30 days
+  trce
 
-Overview
-  4 skills · 10 installations
-  Installations: 3 called · 2 no calls · 5 not measured
-  4 calls
-  1 drifted skill
+  Local report · last 30 days
 
-Recent activity · 3
-  SKILL                        AGENT         SCOPE         CALLS  CATEGORY
-  ──────────────────────────────────────────────────────────────────────────────────────
-  pr-review                    Claude Code   Personal          1  Security
-  pr-review                    Codex         Personal          1  Code quality
-  release-notes                Codex         Personal          1  Docs & release
+  ┌────────────────────────────────────────────────────────────────────────────────────┐
+  │ Overview                                                                           │
+  │   4 skills · 10 installations · Claude Code, Codex, Cursor                         │
+  │   ██████████████████░░░░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒                     │
+  │   3 called   2 no calls   5 not measured                                           │
+  │   4 calls · 2 sessions · 1 drifted skill                                           │
+  └────────────────────────────────────────────────────────────────────────────────────┘
 
-Needs attention · 1
-  SKILL                       AGENT         STATE         ISSUES
-  ──────────────────────────────────────────────────────────────────────────────────────
-  legacy-helper               Cursor        not measured  missing frontmatter, missing …
+  Recent activity · 3
+    SKILL                     AGENT         SCOPE         CALLS  CATEGORY
+    ────────────────────────────────────────────────────────────────────────────────────
+    pr-review                 Claude Code   Personal          1  Security
+    pr-review                 Codex         Personal          1  Code quality
+    release-notes             Codex         Personal          1  Docs & release
 
-No calls · 2
-  SKILL                           AGENT         SCOPE       ISSUES
-  ──────────────────────────────────────────────────────────────────────────────────────
-  code-review                     Claude Code   Personal    -
-  legacy-helper                   Claude Code   Personal    missing frontmatter, missin…
+  Needs attention · 1
+    SKILL                     AGENT         STATE         ISSUES
+    ────────────────────────────────────────────────────────────────────────────────────
+    legacy-helper             Cursor        not measured  missing frontmatter, missing …
 
-4 other installations hidden. Run trce report --all to list everything.
+  No calls · 2
+    SKILL                     AGENT         SCOPE       ISSUES
+    ────────────────────────────────────────────────────────────────────────────────────
+    code-review               Claude Code   Personal    -
+    legacy-helper             Claude Code   Personal    missing frontmatter, missing de…
 
-Local only · Nothing was sent.
+    Claude Code  2 of 3 skills never called · ~21 description tokens per session
+    Overlap      1 pair of skills overlaps ≥ 50% · run trce dedupe
+
+  Showing 6 of 10 installations. Run trce report --all for the full list.
+
+  Local only · Nothing was sent.
+
+  Want this report for your team? See who runs which skill, what drifted, what to
+  standardize · https://trce.sh
+

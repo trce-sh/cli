@@ -2,7 +2,7 @@ import { cliVersion } from './meta.js'
 
 export type ColorLevel = 'none' | '256' | 'truecolor'
 export type TerminalBackground = 'dark' | 'light'
-export type TerminalTone = 'accent' | 'danger' | 'dim' | 'strong' | 'success' | 'warning'
+export type TerminalTone = 'accent' | 'danger' | 'dim' | 'faint' | 'strong' | 'success' | 'warning'
 
 type Environment = Readonly<Record<string, string | undefined>>
 type TerminalContext = { env?: Environment; isTTY?: boolean }
@@ -19,14 +19,27 @@ const swatches: Record<Exclude<TerminalTone, 'strong'>, Record<TerminalBackgroun
     dark: { index: 99, rgb: [157, 152, 255] },
     light: { index: 62, rgb: [99, 91, 255] },
   },
-  danger: onBoth({ index: 167, rgb: [221, 95, 85] }),
-  dim: onBoth({ index: 245, rgb: [145, 142, 137] }),
-  success: onBoth({ index: 71, rgb: [86, 179, 102] }),
-  warning: onBoth({ index: 214, rgb: [255, 157, 54] }),
-}
-
-function onBoth(swatch: Swatch): Record<TerminalBackground, Swatch> {
-  return { dark: swatch, light: swatch }
+  danger: {
+    dark: { index: 167, rgb: [221, 95, 85] },
+    light: { index: 167, rgb: [221, 95, 85] },
+  },
+  dim: {
+    dark: { index: 245, rgb: [145, 142, 137] },
+    light: { index: 245, rgb: [145, 142, 137] },
+  },
+  /** Quieter than `dim`: the empty part of a bar, the line a trace has not reached yet. */
+  faint: {
+    dark: { index: 239, rgb: [78, 76, 84] },
+    light: { index: 250, rgb: [188, 186, 192] },
+  },
+  success: {
+    dark: { index: 71, rgb: [86, 179, 102] },
+    light: { index: 71, rgb: [86, 179, 102] },
+  },
+  warning: {
+    dark: { index: 214, rgb: [255, 157, 54] },
+    light: { index: 214, rgb: [255, 157, 54] },
+  },
 }
 
 const bold = '\u001B[1m'
@@ -66,10 +79,6 @@ export function colorDepth(env: Environment = process.env): Exclude<ColorLevel, 
   return colorterm === 'truecolor' || colorterm === '24bit' ? 'truecolor' : '256'
 }
 
-/**
- * `COLORFGBG` (`15;0` is light text on a dark background) is the only widespread hint about the
- * terminal background. Without it we assume dark, which is what most terminals ship with.
- */
 export function terminalBackground(env: Environment = process.env): TerminalBackground {
   const value = env.COLORFGBG
   if (!value) return 'dark'
@@ -113,6 +122,12 @@ export function asciiMode({
 export type Glyphs = {
   arrow: string
   bar: string
+  /** Filled cell of a proportion bar. */
+  block: string
+  /** A finished progress line. */
+  check: string
+  /** Light cell of a proportion bar: installed, no calls. */
+  blockLight: string
   both: string
   called: string
   corners: { bottomLeft: string; bottomRight: string; topLeft: string; topRight: string }
@@ -123,13 +138,25 @@ export type Glyphs = {
   notMeasured: string
   range: string
   rule: string
+  /** Hatched cell of a proportion bar: the part that could not be measured. */
+  shade: string
   spinner: readonly string[]
+  /** Cell of a per-row call bar. */
+  tick: string
+  /**
+   * The trace mark from the wordmark, two rows of six cells: a faint expected line on top, the
+   * trace leaving the lower dot and joining it. `faint` cells print quieter than `trace` cells.
+   */
+  trace: { faint: string; top: string; bottom: string }
 }
 
 const unicodeGlyphs: Glyphs = {
   arrow: '→',
   bar: '│',
+  block: '█',
+  blockLight: '░',
   both: '↔',
+  check: '✓',
   called: '●',
   corners: { bottomLeft: '└', bottomRight: '┘', topLeft: '┌', topRight: '┐' },
   dot: '·',
@@ -139,13 +166,19 @@ const unicodeGlyphs: Glyphs = {
   notMeasured: '?',
   range: '–',
   rule: '─',
+  shade: '▒',
   spinner: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
+  tick: '▇',
+  trace: { faint: '○──', top: '╭─●', bottom: '●──╯' },
 }
 
 const asciiGlyphs: Glyphs = {
   arrow: '->',
   bar: '|',
+  block: '#',
+  blockLight: '-',
   both: '<->',
+  check: '+',
   called: '*',
   corners: { bottomLeft: '+', bottomRight: '+', topLeft: '+', topRight: '+' },
   dot: '-',
@@ -155,7 +188,10 @@ const asciiGlyphs: Glyphs = {
   notMeasured: '?',
   range: '-',
   rule: '-',
+  shade: '?',
   spinner: ['-', '\\', '|', '/'],
+  tick: '#',
+  trace: { faint: 'o--', top: '+-*', bottom: '*--+' },
 }
 
 export function glyphs(ascii = asciiMode()): Glyphs {
@@ -207,21 +243,39 @@ export function terminalLink(
 }
 
 export function brand({
+  ascii = asciiMode(),
   color = supportsColor(),
   hyperlinks = supportsHyperlinks(),
+  traceProgress = 1,
 }: {
+  ascii?: boolean
   color?: boolean
   hyperlinks?: boolean
+  /** 0 to 1: how much of the trace has been drawn; the reveal animates this. */
+  traceProgress?: number
 } = {}) {
   if (!color) return 'trce'
+  const mark = glyphs(ascii).trace
+  const link = terminalLink('https://trce.sh', {
+    color,
+    hyperlinks,
+    label: 'trce.sh',
+    tone: 'accent',
+  })
+  const tagline = terminalText('Review system for your agent skills', 'strong', { color })
+  const version = terminalText(`CLI ${glyphs(ascii).dot} ${cliVersion}`, 'dim', { color })
+  const markWidth = mark.faint.length + mark.top.length
+  const gap = '   '
+  const textColumn = ' '.repeat(markWidth + gap.length)
+  // The trace draws from the lower dot, up the curve, then along the top to the target dot.
+  const drawn = Math.round(
+    Math.max(0, Math.min(1, traceProgress)) * (mark.bottom.length + mark.top.length),
+  )
+  const bottom = mark.bottom.slice(0, drawn).padEnd(mark.bottom.length)
+  const top = mark.top.slice(0, Math.max(0, drawn - mark.bottom.length)).padEnd(mark.top.length)
   return [
-    terminalLink('https://trce.sh', {
-      color,
-      hyperlinks,
-      label: 'trce.sh',
-      tone: 'accent',
-    }),
-    terminalText('Review system for your agent skills', 'strong', { color }),
-    terminalText(`CLI ${glyphs().dot} ${cliVersion}`, 'dim', { color }),
+    `${terminalText(mark.faint, 'faint', { color })}${terminalText(top, 'strong', { color })}${gap}${link}`,
+    `${terminalText(bottom, 'strong', { color })}${' '.repeat(markWidth - mark.bottom.length)}${gap}${tagline}`,
+    `${textColumn}${version}`,
   ].join('\n')
 }
