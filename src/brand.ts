@@ -21,11 +21,11 @@ const swatches: Record<Exclude<TerminalTone, 'strong'>, Record<TerminalBackgroun
   },
   danger: {
     dark: { index: 167, rgb: [221, 95, 85] },
-    light: { index: 167, rgb: [221, 95, 85] },
+    light: { index: 124, rgb: [185, 58, 48] },
   },
   dim: {
     dark: { index: 245, rgb: [145, 142, 137] },
-    light: { index: 245, rgb: [145, 142, 137] },
+    light: { index: 242, rgb: [107, 104, 117] },
   },
   /** Quieter than `dim`: the empty part of a bar, the line a trace has not reached yet. */
   faint: {
@@ -34,11 +34,11 @@ const swatches: Record<Exclude<TerminalTone, 'strong'>, Record<TerminalBackgroun
   },
   success: {
     dark: { index: 71, rgb: [86, 179, 102] },
-    light: { index: 71, rgb: [86, 179, 102] },
+    light: { index: 28, rgb: [47, 125, 63] },
   },
   warning: {
     dark: { index: 214, rgb: [255, 157, 54] },
-    light: { index: 214, rgb: [255, 157, 54] },
+    light: { index: 130, rgb: [179, 90, 0] },
   },
 }
 
@@ -79,7 +79,19 @@ export function colorDepth(env: Environment = process.env): Exclude<ColorLevel, 
   return colorterm === 'truecolor' || colorterm === '24bit' ? 'truecolor' : '256'
 }
 
+let detectedBackground: TerminalBackground | null = null
+
+/** Records what the terminal answered when asked for its background; see `runtime.ts`. */
+export function setTerminalBackground(background: TerminalBackground | null) {
+  detectedBackground = background
+}
+
+/**
+ * Light or dark, so the palette can pick tones that read on the actual background. A detected
+ * answer wins; otherwise `COLORFGBG`, which a few terminals set; otherwise dark, the common case.
+ */
 export function terminalBackground(env: Environment = process.env): TerminalBackground {
+  if (detectedBackground) return detectedBackground
   const value = env.COLORFGBG
   if (!value) return 'dark'
   const background = Number(value.split(';').at(-1))
