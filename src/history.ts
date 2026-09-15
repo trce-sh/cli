@@ -29,7 +29,16 @@ type ScanHistoryOptions = {
   from: string
   historyDirectories?: Partial<Record<HarnessName, string>>
   homeDirectory: string
+  /** Called after each session file is considered, so a spinner can show the scan moving. */
+  onProgress?: (progress: HistoryScanProgress) => void
   repositorySlugForCwd?: (cwd: string) => Promise<string | null>
+}
+
+export type HistoryScanProgress = {
+  /** Session files considered so far under this harness root, skipped ones included. */
+  filesRead: number
+  filesTotal: number
+  harness: HarnessName
 }
 
 /**
@@ -79,7 +88,7 @@ export async function scanHistory(options: ScanHistoryOptions) {
         options.historyDirectories?.[adapter.harness] ??
         legacyDirectories[adapter.harness] ??
         adapter.defaultDirectory(homes)
-      return scanFiles(root, options.from, adapter)
+      return scanFiles(root, options.from, adapter, options.onProgress)
     }),
   )
   const sessions = parsedHarnesses.flatMap((parsed) => parsed.sessions)
@@ -123,11 +132,18 @@ async function scanFiles(
   root: string,
   from: string,
   adapter: HistoryAdapter,
+  onProgress?: (progress: HistoryScanProgress) => void,
 ): Promise<ScannedHarness> {
   const files = await jsonlFiles(root)
   const windowStart = Date.parse(from)
   const parsed: ParsedHarness[] = []
   let unreadableFiles = 0
+  let filesRead = 0
+  const progress = () => {
+    filesRead += 1
+    onProgress?.({ filesRead, filesTotal: files.length, harness: adapter.harness })
+  }
+  onProgress?.({ filesRead, filesTotal: files.length, harness: adapter.harness })
   for (const file of files) {
     let result: ParsedHarness | null
     try {
@@ -139,6 +155,8 @@ async function scanFiles(
     } catch {
       unreadableFiles += 1
       continue
+    } finally {
+      progress()
     }
     const session = result.sessions[0]
     if (!session || sessionIsInWindow(session, from)) parsed.push(result)

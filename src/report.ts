@@ -1,6 +1,6 @@
 import { resolve } from 'node:path'
 import { driftGroups, duplicateCandidates } from './analysis.js'
-import { repositorySlug, scanHistory } from './history.js'
+import { type HistoryScanProgress, repositorySlug, scanHistory } from './history.js'
 import { scanInventory } from './inventory.js'
 import type { LocalReport } from './types.js'
 
@@ -11,10 +11,17 @@ export type GenerateReportOptions = {
   env?: NodeJS.ProcessEnv
   homeDirectory: string
   now?: Date
+  /** Scan progress for a status line; see `ScanProgress`. */
+  onProgress?: (progress: ScanProgress) => void
   projectDirectory?: string
   repositorySlugForCwd?: (cwd: string) => Promise<string | null>
   sinceDays?: number
 }
+
+/** What the scan is doing right now: session files per harness, then the skill inventory. */
+export type ScanProgress =
+  | ({ kind: 'sessions' } & HistoryScanProgress)
+  | { done: boolean; installations: number; kind: 'skills' }
 
 export async function generateLocalReport(options: GenerateReportOptions): Promise<LocalReport> {
   const now = options.now ?? new Date()
@@ -24,18 +31,29 @@ export async function generateLocalReport(options: GenerateReportOptions): Promi
   const projectDirectory = options.projectDirectory ? resolve(options.projectDirectory) : undefined
   const resolveRepository = options.repositorySlugForCwd ?? repositorySlug
   const projectRepo = projectDirectory ? await resolveRepository(projectDirectory) : null
+  const onProgress = options.onProgress
+  onProgress?.({ done: false, installations: 0, kind: 'skills' })
   const [skills, history] = await Promise.all([
     scanInventory({
       homeDirectory: options.homeDirectory,
       projectRepo,
       ...(options.env ? { env: options.env } : {}),
       ...(projectDirectory ? { projectDirectory } : {}),
+    }).then((inventory) => {
+      onProgress?.({ done: true, installations: inventory.length, kind: 'skills' })
+      return inventory
     }),
     scanHistory({
       from,
       homeDirectory: options.homeDirectory,
       ...(options.env ? { env: options.env } : {}),
       repositorySlugForCwd: resolveRepository,
+      ...(onProgress
+        ? {
+            onProgress: (progress: HistoryScanProgress) =>
+              onProgress({ kind: 'sessions', ...progress }),
+          }
+        : {}),
       ...(options.claudeProjectsDirectory
         ? { claudeProjectsDirectory: options.claudeProjectsDirectory }
         : {}),

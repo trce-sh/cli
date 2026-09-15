@@ -1,6 +1,8 @@
+import { animateReport } from './animate.js'
 import { asciiMode, supportsColor, supportsHyperlinks } from './brand.js'
 import { type CliContext, type CliResult, runCli } from './cli.js'
 import { detectCommandPrefix } from './invocation.js'
+import type { ReportScene } from './output.js'
 import { createTerminalStatusLine, type TerminalStatusLine } from './status-line.js'
 import { asRecord } from './value.js'
 
@@ -51,12 +53,21 @@ export function createRuntimeContext(
       status.stop()
       progressStream.write(`${message}\n`)
     },
-    onStatus: (message: string) => status.update(message),
+    onStatus: (message) => status.update(message),
     warn: (message: string) => {
       status.stop()
       runtime.stderr.write(`${message}\n`)
     },
-    ...(stdoutIsTTY ? { readTerminalWidth } : {}),
+    ...(stdoutIsTTY
+      ? {
+          animate: async (scene: ReportScene, notice: string | null) => {
+            status.stop()
+            if (notice) runtime.stdout.write(`${notice}\n`)
+            await animateReport(scene, (value) => runtime.stdout.write(value))
+          },
+          readTerminalWidth,
+        }
+      : {}),
     ...(terminalWidth === undefined ? {} : { terminalWidth }),
     ...(runtime.argv[1] ? { scriptPath: runtime.argv[1] } : {}),
   }

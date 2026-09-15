@@ -22,6 +22,7 @@ import {
 import { fetchCatalogCredential } from './catalog-access.js'
 import {
   codingAgentLabel,
+  codingAgentList,
   codingAgents,
   installableCodingAgentIds,
   installableCodingAgentList,
@@ -46,7 +47,14 @@ import { defaultCommandPrefix } from './invocation.js'
 import { loadLocalSkillFiles, selectActionSkill } from './local-skill-source.js'
 import { cliVersion } from './meta.js'
 import { openExternalUrl } from './open-url.js'
-import { formatDedupe, formatEarlyAccessCta, formatReport, formatSkillDiff } from './output.js'
+import {
+  buildReportScene,
+  formatDedupe,
+  formatEarlyAccessCta,
+  formatSkillDiff,
+  type ReportScene,
+  renderReportScene,
+} from './output.js'
 import {
   assertPayloadPrivacy,
   buildLocalReportExport,
@@ -61,10 +69,11 @@ import {
   writePendingActions,
 } from './pending.js'
 import { sendPayload } from './push.js'
-import { generateLocalReport, parseSinceDays } from './report.js'
+import { generateLocalReport, parseSinceDays, type ScanProgress } from './report.js'
 import { withTransientRetry } from './retry.js'
 import { fetchTeamScope } from './scope.js'
 import { configuredDashboardUrl } from './service.js'
+import type { StatusItem } from './status-line.js'
 import { linkedConfigPath, notLinkedMessage, notLinkedResult, readLinkedTeam } from './team-link.js'
 import type { HarnessName } from './types.js'
 import { homeRelativePath } from './value.js'
@@ -75,6 +84,8 @@ const backgroundPushSentence =
 
 export type CliResult = {
   exitCode: number
+  /** Set when the command already printed the waiting-changes notice itself. */
+  noticeShown?: boolean
   stderr: string
   stdout: string
 }
@@ -101,7 +112,12 @@ export type CliContext = {
   openPullRequest?: typeof openLaptopPullRequest
   /** Prints a line right away (stdout, or stderr when stdout is not a terminal). */
   onProgress?: (message: string) => void
-  onStatus?: (message: string) => void
+  onStatus?: (message: string | readonly StatusItem[]) => void
+  /**
+   * Plays the report reveal in place of returning it as `stdout`; a terminal runtime provides
+   * this, pipes and tests leave it unset. The notice, when any, prints first.
+   */
+  animate?: (scene: ReportScene, notice: string | null) => Promise<void>
   platform?: string
   /** Reads the live terminal width after slow scans, so a resize cannot leave stale columns. */
   readTerminalWidth?: () => number | undefined
@@ -226,6 +242,7 @@ async function withPendingNotice(
 ): Promise<CliResult> {
   if (
     result.exitCode !== 0 ||
+    result.noticeShown ||
     !noticeCommands.has(command) ||
     args.includes('--json') ||
     args.includes('--dry-run') ||
@@ -233,10 +250,14 @@ async function withPendingNotice(
   ) {
     return result
   }
-  const notice = formatPendingNotice(await readPendingActions(pendingPathOf(context)), {
+  const notice = await pendingNotice(context)
+  return notice ? { ...result, stdout: `${notice}\n${result.stdout}` } : result
+}
+
+async function pendingNotice(context: CliContext) {
+  return formatPendingNotice(await readPendingActions(pendingPathOf(context)), {
     commandPrefix: commandPrefixOf(context),
   })
-  return notice ? { ...result, stdout: `${notice}\n${result.stdout}` } : result
 }
 
 /**
@@ -592,6 +613,42 @@ function statusText(context: CliContext, message: string) {
   return `${message}${glyphs(asciiMode({ env: envOf(context) })).ellipsis}`
 }
 
+/**
+ * Per-agent status lines show completed file counts, followed by the skill inventory.
+ */
+function scanProgressStatus(context: CliContext) {
+  const symbols = glyphs(asciiMode({ env: envOf(context) }))
+  const counts = new Map<HarnessName, { filesRead: number; filesTotal: number }>()
+  let skills: { done: boolean; installations: number } = { done: false, installations: 0 }
+  return (progress: ScanProgress) => {
+    if (progress.kind === 'skills') skills = progress
+    else
+      counts.set(progress.harness, {
+        filesRead: progress.filesRead,
+        filesTotal: progress.filesTotal,
+      })
+    const items: StatusItem[] = codingAgentList.flatMap((agent) => {
+      const count = counts.get(agent.id)
+      if (!count) return []
+      const text = `${codingAgentLabel(agent.id)} sessions`
+      if (count.filesTotal === 0) return [{ detail: `${symbols.dot} none`, done: true, text }]
+      const done = count.filesRead >= count.filesTotal
+      const progress = done ? `${count.filesTotal}` : `${count.filesRead}/${count.filesTotal}`
+      return [{ detail: `${symbols.dot} ${progress}`, done, text }]
+    })
+    items.push(
+      skills.done
+        ? {
+            detail: `${symbols.dot} ${skills.installations} installations`,
+            done: true,
+            text: 'Skills',
+          }
+        : { text: `Skills${symbols.ellipsis}` },
+    )
+    context.onStatus?.(items)
+  }
+}
+
 async function pullRequestCommand(
   command: 'promote' | 'unify',
   args: readonly string[],
@@ -683,14 +740,16 @@ async function reportCommand(args: readonly string[], context: CliContext): Prom
   rejectUnknownOptions(
     'report',
     args,
-    new Set(['--all', '--json', '--since', since ?? '']),
+    new Set(['--all', '--json', '--since', '--static', since ?? '']),
     context,
   )
   const sinceDays = parseSinceDays(since)
-  if (!args.includes('--json')) {
-    context.onStatus?.(statusText(context, 'Scanning skills and local session history'))
-  }
-  const report = await generateLocalReport(reportOptions(context, sinceDays))
+  const quiet = args.includes('--json')
+  if (!quiet) context.onStatus?.(statusText(context, 'Scanning skills and local session history'))
+  const report = await generateLocalReport({
+    ...reportOptions(context, sinceDays),
+    ...(quiet || !context.onStatus ? {} : { onProgress: scanProgressStatus(context) }),
+  })
   if (args.includes('--json')) {
     return {
       exitCode: 0,
@@ -705,16 +764,34 @@ async function reportCommand(args: readonly string[], context: CliContext): Prom
     homeDirectory: context.homeDirectory ?? homedir(),
     ...(terminalWidth === undefined ? {} : { terminalWidth }),
   }
-  const localReport = formatReport(report, outputOptions)
-  const earlyAccessCta =
-    context.interactive === true && !(await readLinkedTeam(context))
-      ? `\n${formatEarlyAccessCta(outputOptions)}\n`
-      : ''
+  const showEarlyAccessCta = context.interactive === true && !(await readLinkedTeam(context))
+  const scene = buildReportScene(report, { ...outputOptions, teamLine: !showEarlyAccessCta })
+  const earlyAccessCta = showEarlyAccessCta
+    ? `\n${formatEarlyAccessCta(outputOptions)
+        .split('\n')
+        .map((line) => `  ${line}`)
+        .join('\n')}\n`
+    : ''
+  if (context.animate && reportAnimates(args, context)) {
+    await context.animate(scene, await pendingNotice(context))
+    return { exitCode: 0, noticeShown: true, stderr: '', stdout: earlyAccessCta }
+  }
   return {
     exitCode: 0,
     stderr: '',
-    stdout: `${localReport}${earlyAccessCta}`,
+    stdout: `${renderReportScene(scene)}${earlyAccessCta}`,
   }
+}
+
+/**
+ * The reveal plays in an interactive colour terminal unless the user opts out with `--static`,
+ * `TRCE_STATIC=1`, or `CI`. Pipes never animate: they get no `animate` hook at all.
+ */
+function reportAnimates(args: readonly string[], context: CliContext) {
+  if (args.includes('--static')) return false
+  const env = envOf(context)
+  if (env.TRCE_STATIC === '1' || env.CI) return false
+  return context.interactive === true && context.color !== false
 }
 
 async function dedupeCommand(args: readonly string[], context: CliContext): Promise<CliResult> {
