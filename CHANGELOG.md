@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Changes
+
+- The local report opens with the trace mark, pads every line, boxes the overview with a proportion bar of called, no-call, and not-measured installations, and shows a call bar per row in Recent activity on terminals 100 columns or wider.
+- Every section table shares one skill-column width, so agent and scope columns line up across sections and issue text gets the spare room.
+- After No calls, the report counts skills never called per agent with the description tokens they still load per session, and the number of overlapping skill pairs.
+- In an interactive terminal the report plays a short reveal after the scan: progress lines per agent with live file counts, then the header, overview, and activity rows. `--static` or `TRCE_STATIC=1` prints at once; pipes, `--json`, and `CI` never animate.
+- The report asks the terminal for its background colour and uses a light palette on light backgrounds. Light backgrounds use separate dim, success, warning, and danger tones.
+- Email, newsletter, drip, and nurture skills file under Marketing & content instead of Agent workflows.
+
 ## [0.2.1] - 2026-09-14
 
 ### Bug fixes

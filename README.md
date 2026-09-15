@@ -36,6 +36,7 @@ work offline:
 ```sh
 trce report --all         # Include installed skills with no recorded calls
 trce report --since 7d    # Focus on the past week
+trce report --static      # Print at once, without the reveal
 trce dedupe              # Find skills with overlapping instructions
 trce diff review         # Compare installed copies of a skill named "review"
 trce report --json       # Use the report in your own tools
