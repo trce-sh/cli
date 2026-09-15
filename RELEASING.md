@@ -46,8 +46,9 @@ Use disposable test data. Unit tests and synthetic parser benchmarks do not repl
   maintainer two-factor authentication, and npm Trusted Publisher settings for owner `trce-sh`,
   repository `cli`, workflow `publish.yml`, and environment `npm`. Do not store an npm token.
 - Some protections depend on visibility and plan. Recheck them after transfer and visibility
-  changes. Keep release tags blocked from the `npm` environment until reviewer protection is
-  available and configured; then allow only `v*` tags.
+  changes. Allow only `v*` tags into the `npm` environment. Creating the reviewed GitHub Release
+  is the human publication action; do not add an environment reviewer unless the project needs a
+  second independent approval.
 
 ## Prepare a release
 
