@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-09-15
+
 ### Changes
 
 - The local report opens with the trace mark, pads every line, boxes the overview with a proportion bar of called, no-call, and not-measured installations, and shows a call bar per row in Recent activity on terminals 100 columns or wider.
