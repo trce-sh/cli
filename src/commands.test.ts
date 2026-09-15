@@ -10,7 +10,11 @@ import { writeLinkedConfig } from './config.js'
 import { commandHelpText } from './help.js'
 import { scanInventory } from './inventory.js'
 import { pendingActionsPath, readPendingActions, writePendingActions } from './pending.js'
+import type { StatusItem } from './status-line.js'
 import { notLinkedMessage } from './team-link.js'
+
+const DOT = '\u00B7'
+const ELLIPSIS = '\u2026'
 
 const fixtureRoot = fileURLToPath(new URL('../fixtures/', import.meta.url))
 const canDropReadPermission = process.platform !== 'win32' && process.getuid?.() !== 0
@@ -58,26 +62,59 @@ describe('offline CLI commands', () => {
 
   it('shows progress for an interactive report without touching JSON output', async () => {
     const context = await fixtureContext()
-    const progress: string[] = []
+    const progress: (string | readonly StatusItem[])[] = []
     const withProgress = {
       ...context,
-      onStatus: (message: string) => progress.push(message),
+      onStatus: (message: string | readonly StatusItem[]) => progress.push(message),
     }
 
     await runCli(['report'], withProgress)
     const json = await runCli(['report', '--json'], withProgress)
 
-    expect(progress).toEqual(['Scanning skills and local session history…'])
+    expect(progress[0]).toBe(`Scanning skills and local session history${ELLIPSIS}`)
+    const items = progress.slice(1)
+    expect(items.length).toBeGreaterThan(0)
+    expect(items.every((message) => Array.isArray(message))).toBe(true)
+    const last = items.at(-1)
+    expect(Array.isArray(last) && last.every((item) => item.done)).toBe(true)
+    expect(Array.isArray(last) ? last.map((item) => `${item.text} ${item.detail}`) : []).toEqual([
+      `Claude Code sessions ${DOT} 1`,
+      `Codex sessions ${DOT} 1`,
+      `Skills ${DOT} 10 installations`,
+    ])
     expect(json.stdout.startsWith('{')).toBe(true)
 
     // The ellipsis follows the locale like every other glyph.
-    const ascii: string[] = []
+    const ascii: (string | readonly StatusItem[])[] = []
     await runCli(['report'], {
       ...withProgress,
       env: { LC_ALL: 'C' },
       onStatus: (m) => ascii.push(m),
     })
-    expect(ascii).toEqual(['Scanning skills and local session history...'])
+    expect(ascii[0]).toBe('Scanning skills and local session history...')
+    const asciiLast = ascii.at(-1)
+    expect(Array.isArray(asciiLast) ? asciiLast[0]?.detail : '').toBe('- 1')
+  })
+
+  it.each([
+    { args: [], env: {}, interactive: true, reveals: true },
+    { args: ['--static'], env: {}, interactive: true, reveals: false },
+    { args: [], env: { TRCE_STATIC: '1' }, interactive: true, reveals: false },
+    { args: [], env: { CI: '1' }, interactive: true, reveals: false },
+    { args: ['--json'], env: {}, interactive: true, reveals: false },
+    { args: [], env: {}, interactive: false, reveals: false },
+  ])('respects report reveal controls: %j', async ({ args, env, interactive, reveals }) => {
+    const context = await fixtureContext()
+    const animate = vi.fn(async () => {})
+    const result = await runCli(['report', ...args], {
+      ...context,
+      animate,
+      color: true,
+      env,
+      interactive,
+    })
+    expect(result.exitCode).toBe(0)
+    expect(animate).toHaveBeenCalledTimes(reveals ? 1 : 0)
   })
 
   it('lists the complete inventory only when requested', async () => {
@@ -85,7 +122,7 @@ describe('offline CLI commands', () => {
     const summary = await runCli(['report'], context)
     const complete = await runCli(['report', '--all'], context)
 
-    expect(summary.stdout).toContain('4 other installations hidden')
+    expect(summary.stdout).toContain('Showing 6 of 10 installations')
     expect(summary.stdout).toContain('No calls · 2')
     expect(summary.stdout).toContain('  code-review')
     expect(summary.stdout.indexOf('Recent activity · 3')).toBeLessThan(
@@ -95,8 +132,8 @@ describe('offline CLI commands', () => {
       summary.stdout.indexOf('No calls · 2'),
     )
     expect(complete.stdout).toContain('All installations · 10')
-    expect(complete.stdout).toContain('  ○ code-review · no calls\n    Claude Code')
-    expect(complete.stdout).not.toContain('installations hidden')
+    expect(complete.stdout).toContain('    ○ code-review · no calls\n      Claude Code')
+    expect(complete.stdout).not.toContain('for the full list')
   })
 
   it('reads the terminal width after scanning', async () => {
@@ -155,7 +192,7 @@ describe('offline CLI commands', () => {
 
     expect(empty.exitCode).toBe(0)
     expect(empty.stdout).toContain(
-      'No sessions in the last 30 days\n  ~/.claude/projects  0 sessions · no session files\n  ~/.codex/sessions   0 sessions · no session files\n',
+      '  No sessions in the last 30 days\n    ~/.claude/projects  0 sessions · no session files\n    ~/.codex/sessions   0 sessions · no session files\n',
     )
     expect(empty.stdout).toContain('Local only · Nothing was sent.')
     expect(empty.stdout).not.toContain(home)
@@ -285,7 +322,7 @@ describe('offline CLI commands', () => {
     await chmod(secret, 0o000)
     const report = await runCli(['report'], { ...context, color: false })
     expect(report.stdout).toContain('Recent activity · 3')
-    expect(report.stdout).toContain('\n1 session file could not be read\n')
+    expect(report.stdout).toContain('\n  1 session file could not be read\n')
 
     const home = await mkdtemp(join(tmpdir(), 'trce-unreadable-home-'))
     const projects = join(home, '.claude', 'projects')
@@ -300,7 +337,7 @@ describe('offline CLI commands', () => {
       repositorySlugForCwd: async () => null,
     })
     expect(empty.stdout).toContain(
-      'No sessions in the last 30 days\n  ~/.claude/projects  0 sessions · 1 session file could not be read\n  ~/.codex/sessions   0 sessions · no session files\n',
+      '  No sessions in the last 30 days\n    ~/.claude/projects  0 sessions · 1 session file could not be read\n    ~/.codex/sessions   0 sessions · no session files\n',
     )
   })
 
@@ -593,10 +630,10 @@ describe('team-link gate', () => {
     const dedupe = await runCli(['dedupe'], { ...unlinked, ...interactive })
 
     expect(visible.stdout).toContain(
-      '┌────────────────────────────────────────────────┐\n' +
-        '│  Review skills across your team                │\n' +
-        '│  Request early access  https://trce.sh         │\n' +
-        '└────────────────────────────────────────────────┘\n',
+      '  ┌────────────────────────────────────────────────┐\n' +
+        '  │  Review skills across your team                │\n' +
+        '  │  Request early access  https://trce.sh         │\n' +
+        '  └────────────────────────────────────────────────┘\n',
     )
     expect(redirected.stdout).not.toContain('Request early access')
     expect(json.stdout).not.toContain('Request early access')

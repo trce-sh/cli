@@ -468,16 +468,16 @@ describe('device link and push', () => {
     await runCli(['push'], {
       ...context,
       fetch: ingestFetch([]),
-      onStatus: (message) => manualProgress.push(message),
+      onStatus: (message) => manualProgress.push(String(message)),
     })
     await runCli(['push', '--dry-run'], {
       ...context,
-      onStatus: (message) => dryRunProgress.push(message),
+      onStatus: (message) => dryRunProgress.push(String(message)),
     })
     await runCli(['push', '--quiet'], {
       ...context,
       fetch: ingestFetch([]),
-      onStatus: (message) => hookProgress.push(message),
+      onStatus: (message) => hookProgress.push(String(message)),
     })
 
     expect(manualProgress).toEqual([

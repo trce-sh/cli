@@ -3,9 +3,10 @@ import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Writable } from 'node:stream'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { runCli } from './cli.js'
-import { createRuntimeContext, ignoreClosedPipes, type RuntimeStream } from './runtime.js'
+import { createRuntimeContext, ignoreClosedPipes, main, type RuntimeStream } from './runtime.js'
+import * as background from './terminal-background.js'
 
 function stream(isTTY: boolean) {
   const writes: string[] = []
@@ -33,6 +34,21 @@ function runtime(stdoutIsTTY: boolean) {
 const inactiveStatus = { stop() {}, update() {} }
 
 describe('process runtime', () => {
+  it.each(['report', 'dedupe', 'diff', 'push'])(
+    'does not query the terminal for %s help or JSON',
+    async (command) => {
+      const detect = vi.spyOn(background, 'detectTerminalBackground').mockResolvedValue(null)
+      try {
+        const tty = runtime(true)
+        tty.process.argv.push(command, '--json', '--help')
+        await main(tty.process)
+        expect(detect).not.toHaveBeenCalled()
+      } finally {
+        detect.mockRestore()
+      }
+    },
+  )
+
   it('prints the device code right away on stderr when stdout is not a terminal', async () => {
     const home = await mkdtemp(join(tmpdir(), 'trce-runtime-init-'))
     const piped = runtime(false)

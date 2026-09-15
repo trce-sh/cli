@@ -38,7 +38,7 @@ export function capabilityBadgesFor({ fileNames, text }: { fileNames: string[]; 
  */
 const categoryRules: ReadonlyArray<readonly [SkillCategory, RegExp]> = [
   ['writing', /\b(?:writing|writers?|copywrit\w*|copy|copyedit\w*|essays?|blogs?|prose|voice)\b/u],
-  ['marketing-content', /\bseo\b/u],
+  ['marketing-content', /\b(?:seo|emails?|newsletters?|drip|nurture)\b/u],
   ['docs-release', /\b(?:docs?|documentation|changelogs?|readme|releases?|reference)\b/u],
   [
     'security',

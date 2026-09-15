@@ -55,9 +55,10 @@ export const commandHelp: Readonly<Record<string, CommandHelp>> = {
       ['--since <Nd>', 'Scan this many days of local history, 1d to 3650d (default: 30d)'],
       ['--all', 'List every installation, including skills with no calls'],
       ['--json', 'Print the complete machine-readable local report'],
+      ['--static', 'Print the report at once instead of playing the reveal (or TRCE_STATIC=1)'],
     ],
     summary: 'Show local skill activity and issues',
-    usage: ['report [--since <Nd>] [--all] [--json]'],
+    usage: ['report [--since <Nd>] [--all] [--json] [--static]'],
   },
   dedupe: {
     network: offline,

@@ -23,9 +23,15 @@ type TerminalStatusLineOptions = {
   stream?: StatusStream
 }
 
+/**
+ * One progress line: a spinner while it runs, a check once `done`. `detail` is the count after
+ * the label and prints dim; a finished line prints dim as a whole, so the running ones stand out.
+ */
+export type StatusItem = { detail?: string; done?: boolean; text: string }
+
 export type TerminalStatusLine = {
   stop: () => void
-  update: (message: string) => void
+  update: (message: string | readonly StatusItem[]) => void
 }
 
 const inactiveStatusLine: TerminalStatusLine = {
@@ -45,36 +51,68 @@ export function createTerminalStatusLine({
   const symbols = glyphs(ascii)
   const frames = symbols.spinner
   let frameIndex = 0
-  let message = ''
+  let items: StatusItem[] = []
+  /** Lines currently on screen, so the next render can move back up over them. */
+  let renderedLines = 0
   let startedAt = 0
   let timer: ReturnType<typeof setInterval> | null = null
 
   function render() {
-    if (!message) return
+    if (items.length === 0) return
     const elapsedSeconds = Math.floor((now() - startedAt) / 1000)
     const elapsed = elapsedSeconds > 0 ? ` ${elapsedSeconds}s` : ''
     const width = Math.max(12, target.columns ?? 80)
-    const available = Math.max(1, width - 3 - displayWidth(elapsed))
-    const visibleMessage = truncate(message, available, symbols.ellipsis)
     const frame = frames[frameIndex % frames.length] ?? frames[0] ?? ''
-    const elapsedText = elapsed ? terminalText(elapsed, 'dim', { color }) : ''
+    const lines = items.map((item, index) => {
+      const suffix = index === 0 ? elapsed : ''
+      const available = Math.max(1, width - 3 - displayWidth(suffix))
+      const marker = item.done
+        ? terminalText(symbols.check, 'success', { color })
+        : terminalText(frame, 'accent', { color })
+      const suffixText = suffix ? terminalText(suffix, 'dim', { color }) : ''
+      const detail = item.detail ? ` ${item.detail}` : ''
+      const text = truncate(`${item.text}${detail}`, available, symbols.ellipsis)
+      const label = text.slice(0, Math.min(text.length, item.text.length))
+      const rest = text.slice(label.length)
+      const styled = item.done
+        ? terminalText(text, 'dim', { color })
+        : `${label}${terminalText(rest, 'dim', { color })}`
+      return `${marker} ${styled}${suffixText}`
+    })
     target.write(
-      `${clearLine}${terminalText(frame, 'accent', { color })} ${visibleMessage}${elapsedText}`,
+      `${cursorUp(renderedLines - 1)}${lines.map((line) => `${clearLine}${line}`).join('\n')}`,
     )
+    // A shrinking list leaves stale lines below: clear them and come back up.
+    if (lines.length < renderedLines) {
+      const stale = renderedLines - lines.length
+      target.write(`${'\n'.concat(clearLine).repeat(stale)}${cursorUp(stale)}`)
+    }
+    renderedLines = lines.length
   }
 
   function stop() {
     if (timer) clearInterval(timer)
     timer = null
-    if (message) target.write(clearLine)
-    message = ''
+    if (renderedLines > 0) {
+      target.write(
+        `${cursorUp(renderedLines - 1)}${clearLine}${'\n'.concat(clearLine).repeat(renderedLines - 1)}${cursorUp(renderedLines - 1)}`,
+      )
+    }
+    items = []
+    renderedLines = 0
     frameIndex = 0
     startedAt = 0
   }
 
-  function update(nextMessage: string) {
-    const normalized = nextMessage.replaceAll(/\s+/gu, ' ').trim()
-    if (!normalized) return
+  function update(next: string | readonly StatusItem[]) {
+    const nextItems = (typeof next === 'string' ? [{ text: next }] : next)
+      .map((item) => ({
+        ...item,
+        ...(item.detail ? { detail: item.detail.replaceAll(/\s+/gu, ' ').trim() } : {}),
+        text: item.text.replaceAll(/\s+/gu, ' ').trim(),
+      }))
+      .filter((item) => item.text)
+    if (nextItems.length === 0) return
     if (!timer) {
       startedAt = now()
       timer = setInterval(() => {
@@ -83,11 +121,15 @@ export function createTerminalStatusLine({
       }, frameIntervalMs)
       timer.unref()
     }
-    message = normalized
+    items = nextItems
     render()
   }
 
   return { stop, update }
+}
+
+function cursorUp(lines: number) {
+  return lines > 0 ? `\u001B[${lines}A` : ''
 }
 
 function truncate(value: string, width: number, ellipsis: string) {

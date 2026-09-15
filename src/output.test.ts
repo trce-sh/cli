@@ -114,6 +114,30 @@ describe('duplicate pairs in the report overview', () => {
 })
 
 describe('report sections', () => {
+  it('shows call bars only from 100 terminal columns', () => {
+    for (const terminalWidth of [98, 99, 100]) {
+      const output = formatReport(mixedReport(), { color: false, terminalWidth })
+      expect(output.includes('▇')).toBe(terminalWidth >= 100)
+    }
+  })
+
+  it('keeps tiny installation groups visible without overfilling the proportion bar', () => {
+    const report = {
+      ...reportWith([]),
+      sessions: [sessionCalling('called', 1)],
+      skills: [
+        ...Array.from({ length: 1000 }, () => skill('called')),
+        skill('unused'),
+        { ...skill('cursor'), harness: 'cursor' as const },
+      ],
+    }
+    const output = formatReport(report, { color: false, terminalWidth: 100 })
+    const bar = output.split('\n').find((line) => line.includes('█')) ?? ''
+    expect(bar.match(/[█░▒]/gu)).toHaveLength(60)
+    expect(bar).toContain('░')
+    expect(bar).toContain('▒')
+  })
+
   it('leads with recent activity, then needs attention, then no calls', () => {
     const output = formatReport(mixedReport(), { color: false })
 
@@ -121,7 +145,7 @@ describe('report sections', () => {
       output.indexOf('Needs attention · 1'),
     )
     expect(output.indexOf('Needs attention · 1')).toBeLessThan(output.indexOf('No calls · 1'))
-    expect(output).toContain('2 called · 1 no calls · 0 not measured')
+    expect(output).toContain('2 called   1 no calls   0 not measured')
   })
 
   it('caps the no-calls section and points at --all', () => {
@@ -129,9 +153,9 @@ describe('report sections', () => {
     const output = formatReport({ ...reportWith([]), skills }, { color: false })
 
     expect(output).toContain('No calls · 12')
-    expect(output.match(/^ {2}unused-/gmu)).toHaveLength(10)
+    expect(output.match(/^ {4}unused-/gmu)).toHaveLength(10)
     expect(output).toContain(
-      '2 other installations hidden. Run trce report --all to list everything.',
+      'Showing 10 of 12 installations. Run trce report --all for the full list.',
     )
   })
 
@@ -143,12 +167,12 @@ describe('report sections', () => {
     const empty = formatReport(reportWith([]), { color: false })
 
     expect(table).toContain('  SKILL')
-    expect(table).not.toContain('\nStatus\n')
+    expect(table).not.toContain('\n  Status\n')
     expect(list).toContain('○ unused · no calls')
-    expect(list).toContain('\nStatus\n  ● called · ○ no calls · ? not measured')
-    expect(complete).toContain('\nStatus\n')
-    expect(empty).not.toContain('\nStatus\n')
-    expect(empty.endsWith('Local only · Nothing was sent.\n')).toBe(true)
+    expect(list).toContain('\n  Status\n    ● called · ○ no calls · ? not measured')
+    expect(complete).toContain('\n  Status\n')
+    expect(empty).not.toContain('\n  Status\n')
+    expect(empty.endsWith('Local only · Nothing was sent.\n\n')).toBe(true)
   })
 
   it('adapts report rows to the terminal width', () => {
@@ -185,7 +209,7 @@ describe('report sections', () => {
       const output = formatReport(report, { color: false, terminalWidth })
       expect(output.split('\n').every((line) => displayWidth(line) <= 40)).toBe(true)
       expect(output).toContain('a-very-lo')
-      expect(output).toContain('other installations hidden.')
+      expect(output).toContain('for the full list.')
     }
   })
 
@@ -267,12 +291,12 @@ describe('numbers', () => {
       },
       { color: false, terminalWidth: 88 },
     )
-    const rows = output.split('\n').filter((line) => /^ {2}(busy|quiet) /u.test(line))
+    const rows = output.split('\n').filter((line) => /^ {4}(busy|quiet) /u.test(line))
 
     expect(output).toContain('1,502 skills · 1,502 installations')
     expect(output).toContain('1,237 calls')
     expect(output).toContain('No calls · 1,500')
-    expect(output).toContain('1,490 other installations hidden')
+    expect(output).toContain('Showing 12 of 1,502 installations')
     expect(rows).toHaveLength(2)
     expect(rows[0]).toContain('  1,234  Other')
     expect(rows[1]).toContain('      3  Other')
@@ -295,7 +319,7 @@ describe('east asian width', () => {
       { ...reportWith([]), skills: [skill('abc'), skill('日本語スキル')] },
       { color: false, terminalWidth: 88 },
     )
-    const rows = output.split('\n').filter((line) => line.includes('Claude Code'))
+    const rows = output.split('\n').filter((line) => /^ {4}(abc|日本語スキル) /u.test(line))
 
     expect(rows).toHaveLength(2)
     const agentColumns = rows.map((row) => displayWidth(row.slice(0, row.indexOf('Claude Code'))))
@@ -328,9 +352,9 @@ describe('ascii mode', () => {
         ...reportWith([]),
         skills: [skill('a-very-long-skill-name-that-does-not-fit-in-the-column-at-all')],
       },
-      { ascii: true, color: false, terminalWidth: 60 },
+      { ascii: true, color: false, terminalWidth: 62 },
     )
-    expect(table).toMatch(/^ {2}-{40,}$/mu)
+    expect(table).toMatch(/^ {4}-{40,}$/mu)
     expect(table).toContain('...')
 
     const dedupe = formatDedupe([pair('a', 'b', 0.92), pair('c', 'd', 0.42)], {

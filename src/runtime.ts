@@ -1,7 +1,10 @@
-import { asciiMode, supportsColor, supportsHyperlinks } from './brand.js'
+import { animateReport } from './animate.js'
+import { asciiMode, setTerminalBackground, supportsColor, supportsHyperlinks } from './brand.js'
 import { type CliContext, type CliResult, runCli } from './cli.js'
 import { detectCommandPrefix } from './invocation.js'
+import type { ReportScene } from './output.js'
 import { createTerminalStatusLine, type TerminalStatusLine } from './status-line.js'
+import { detectTerminalBackground } from './terminal-background.js'
 import { asRecord } from './value.js'
 
 /** The parts of `process.stdout` / `process.stderr` the CLI touches. */
@@ -51,12 +54,21 @@ export function createRuntimeContext(
       status.stop()
       progressStream.write(`${message}\n`)
     },
-    onStatus: (message: string) => status.update(message),
+    onStatus: (message) => status.update(message),
     warn: (message: string) => {
       status.stop()
       runtime.stderr.write(`${message}\n`)
     },
-    ...(stdoutIsTTY ? { readTerminalWidth } : {}),
+    ...(stdoutIsTTY
+      ? {
+          animate: async (scene: ReportScene, notice: string | null) => {
+            status.stop()
+            if (notice) runtime.stdout.write(`${notice}\n`)
+            await animateReport(scene, (value) => runtime.stdout.write(value))
+          },
+          readTerminalWidth,
+        }
+      : {}),
     ...(terminalWidth === undefined ? {} : { terminalWidth }),
     ...(runtime.argv[1] ? { scriptPath: runtime.argv[1] } : {}),
   }
@@ -89,7 +101,22 @@ export function ignoreClosedPipes(
   }
 }
 
+/** Commands whose colour output is worth a background check before printing. */
+const colourReportCommands = new Set(['report', 'dedupe', 'diff'])
+
 export async function main(runtime: RuntimeProcess = process): Promise<number> {
+  const args = runtime.argv.slice(2)
+  const command = args[0]
+  setTerminalBackground(null)
+  if (
+    command &&
+    colourReportCommands.has(command) &&
+    !args.some((arg) => ['--json', '--help', '-h'].includes(arg)) &&
+    runtime.stdout.isTTY === true &&
+    supportsColor({ env: runtime.env, isTTY: true })
+  ) {
+    setTerminalBackground(await detectTerminalBackground({ stdout: runtime.stdout }))
+  }
   const { context, finish } = createRuntimeContext(runtime)
   const result = await runCli(runtime.argv.slice(2), context)
   finish(result)

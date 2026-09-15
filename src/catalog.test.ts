@@ -320,12 +320,12 @@ describe('managed skill installs', () => {
         '--harness',
         'codex',
       ],
-      { fetch, homeDirectory, onStatus: (status) => statuses.push(status) },
+      { fetch, homeDirectory, onStatus: (status) => statuses.push(String(status)) },
     )
     const updated = await runCli(['update', 'review-helper', '--dry-run'], {
       fetch,
       homeDirectory,
-      onStatus: (status) => statuses.push(status),
+      onStatus: (status) => statuses.push(String(status)),
     })
 
     expect(added).toMatchObject({ exitCode: 0, stderr: '' })

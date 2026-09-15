@@ -16,6 +16,12 @@ refers to the skill version observed during the scan, not necessarily the versio
 `report`, `dedupe`, and `diff` are offline. Terminal output and JSON exports are separate from
 the upload payload.
 
+Human reports share a report scene for static output and the interactive reveal. Per-agent scan
+progress counts completed session files. `--static`, `TRCE_STATIC=1`, `CI`, pipes, and `--json`
+skip the reveal. Before colour output for `report`, `dedupe`, or `diff`, the runtime can query
+the terminal background with OSC 11 and a 150 ms timeout. The query writes only to the terminal;
+JSON and upload commands never issue it.
+
 ## Network and file changes
 
 Linking stores a machine token locally. Uploads first fetch the linked workspace's repository
@@ -49,6 +55,7 @@ Remove and reinstall hooks to clear it.
 | Inventory and session discovery | [inventory](../src/inventory.ts), [history](../src/history.ts) |
 | Native formats | [parsers](../src/parsers/) |
 | Analysis and presentation | [analysis](../src/analysis.ts), [output](../src/output.ts) |
+| Terminal reveal and background | [animation](../src/animate.ts), [background detection](../src/terminal-background.ts) |
 | Upload contract | [payload](../src/payload.ts) |
 | Managed installs | [catalog](../src/catalog.ts), [install records](../src/installs.ts) |
 | Hooks | [hooks](../src/hooks.ts) |
