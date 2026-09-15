@@ -61,6 +61,13 @@ describe('skill text normalization', () => {
 })
 
 describe('keyword category fallback', () => {
+  it.each(['email', 'emails', 'newsletter', 'newsletters', 'drip', 'nurture'])(
+    'files %s skills under Marketing and content',
+    (keyword) => {
+      expect(keywordCategory(`${keyword}-sequence`, 'Plan a campaign.')).toBe('marketing-content')
+    },
+  )
+
   it('labels the skills the 2026-08-30 laptop report mislabeled', () => {
     // The report printed devops-infra: bare `ci` matched inside "pricing".
     expect(
